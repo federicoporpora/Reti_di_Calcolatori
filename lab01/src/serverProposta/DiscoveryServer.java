@@ -20,11 +20,11 @@ public class DiscoveryServer {
 			DatagramPacket packet = null;
 			byte[] buf = new byte[256];
 			int port = -1;
-			Thread[] rowSwapServerArr = new Thread[(args.length-2) / 2];
+			Thread[] rowSwapServerArr = new Thread[args.length/2];
 
-			if (args.length % 2 == 1) throw new IllegalArgumentException("Numero di argomenti dispari");
+			if (args.length % 2 == 0) throw new IllegalArgumentException("Numero di argomenti pari");
 			try {
-				port = Integer.parseInt(args[1]);
+				port = Integer.parseInt(args[0]);
 				// controllo che la porta sia nel range consentito 1024-65535
 				if (port < 1024 || port > 65535) {
 					System.out.println("Usage: java DiscoveryServer [serverPort>1024]");
@@ -37,7 +37,7 @@ public class DiscoveryServer {
 
 			// popolo la mappa con i file e le porte
 			HashMap<String, Integer> hashmap = new HashMap<>();
-			for (int i = 2; i < args.length; i += 2) 
+			for (int i = 1; i < args.length; i += 2) 
 				if (hashmap.putIfAbsent(args[i], Integer.parseInt(args[i+1])) != null)
 					throw new IllegalArgumentException("Porta duplicata");
 			
@@ -53,9 +53,10 @@ public class DiscoveryServer {
 			}
 			
 			// lancio dei SR
-			for (int i = 2; i < args.length; i += 2) {
-				rowSwapServerArr[i] = new RowSwapServer(Integer.parseInt(args[i+1]), args[i]);
-				rowSwapServerArr[i].start();
+			int j = 0;
+			for (int i = 1; i < args.length; i += 2) {
+				rowSwapServerArr[j] = new RowSwapServer(Integer.parseInt(args[i+1]), args[i], args[i].replace(".txt", "Write.txt"));
+				rowSwapServerArr[j++].start();
 			}
 			
 			try {
@@ -67,12 +68,13 @@ public class DiscoveryServer {
 				byte[] data = null;
 
 				while (true) {
-					System.out.println("\nIn attesa di richieste...");
+					System.out.println("\nDiscoveryServer In attesa di richieste...");
 					
 					// ricezione del datagramma
 					try {
 						packet.setData(buf);
 						socket.receive(packet);
+						System.out.println("DiscoveryServer: Ricevuto il pacchetto");
 					}
 					catch (IOException e) {
 						System.err.println("Problemi nella ricezione del datagramma: "
@@ -87,7 +89,7 @@ public class DiscoveryServer {
 						biStream = new ByteArrayInputStream(packet.getData(), 0, packet.getLength());
 						diStream = new DataInputStream(biStream);
 						richiesta = diStream.readUTF();
-						System.out.println("Richiesta: file" + richiesta + " presente alla porta " + hashmap.get(richiesta));
+						System.out.println("Richiesta: file " + richiesta + " presente alla porta " + hashmap.get(richiesta));
 					}
 					catch (Exception e) {
 						System.err.println("Problemi nella lettura della richiesta: file" + richiesta + " presente alla porta " + hashmap.get(richiesta));

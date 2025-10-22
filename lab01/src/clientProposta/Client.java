@@ -95,56 +95,60 @@ public class Client {
 					System.out.println("Usage: java LineClient serverIP serverPort, il file non esiste");
 				    System.exit(1);
 				}
+				packet = new DatagramPacket(buf, buf.length, addr, port);
 			    System.out.println("Connessione allo SS realizzata con successo");
 			} catch (IOException e) {
 				System.out.println("Problemi nella lettura della prima risposta: ");
 				e.printStackTrace();
 			}
 			
-			//creazione della nuova richiesta da fare allo SS
-			String richiesta = null;
-			System.out.println("Prima linea che si vuole scambiare?");
-			primaLinea = Integer.parseInt(stdIn.readLine());
-			System.out.println("Seconda linea che si vuole scambiare?");
-			secondaLinea = Integer.parseInt(stdIn.readLine());
-			richiesta = primaLinea + " " + secondaLinea;
+			while (true) {
+				//creazione della nuova richiesta da fare allo SS
+				String richiesta = null;
+				System.out.println("Prima linea che si vuole scambiare? (se non voglio piu' scambiare linee digitare 0)");
+				primaLinea = Integer.parseInt(stdIn.readLine());
+				if (primaLinea == 0) break;
+				System.out.println("Seconda linea che si vuole scambiare? (se non voglio piu' scambiare linee digitare 0)");
+				secondaLinea = Integer.parseInt(stdIn.readLine());
+				if (secondaLinea == 0) break;
+				richiesta = primaLinea + " " + secondaLinea;
+				
+				System.out.println("Creazione della richiesta allo SS per file " + file + " scambiando le linee " + primaLinea + " e " + secondaLinea);
+				
+				// invio della richiesta
+				try {
+					boStream = new ByteArrayOutputStream();
+					doStream = new DataOutputStream(boStream);
+					doStream.writeUTF(richiesta);
+					data = boStream.toByteArray();
+					packet.setData(data);
+					socket.send(packet);
+					System.out.println("Richiesta inviata a " + addr + ", " + port);
+				} catch (IOException e) {
+					System.out.println("Problemi nell'invio della seconda richiesta: ");
+					e.printStackTrace();
+				}
 			
-			System.out.println("Creazione della richiesta allo SS per file " + file + " scambiando le linee " + primaLinea + " e " + secondaLinea);
+				// settaggio del buffer di ricezione
+				try {
+					packet.setData(buf);
+					socket.receive(packet);
+				} catch (IOException e) {
+					System.out.println("Problemi nella ricezione del secondo datagramma: ");
+					e.printStackTrace();
+				}
 			
-			// invio della richiesta
-			try {
-				boStream = new ByteArrayOutputStream();
-				doStream = new DataOutputStream(boStream);
-				doStream.writeUTF(richiesta);
-				data = boStream.toByteArray();
-				packet.setData(data);
-				socket.send(packet);
-				System.out.println("Richiesta inviata a " + addr + ", " + port);
-			} catch (IOException e) {
-				System.out.println("Problemi nell'invio della seconda richiesta: ");
-				e.printStackTrace();
+				//settaggio di display a schermo della seconda ricezione
+				try {
+					biStream = new ByteArrayInputStream(packet.getData(), 0, packet.getLength());
+					diStream = new DataInputStream(biStream);
+					risposta = diStream.readUTF();
+					System.out.println(risposta);
+				} catch (IOException e) {
+					System.out.println("Problemi nella lettura della seconda risposta: ");
+					e.printStackTrace();
+				}
 			}
-			
-			// settaggio del buffer di ricezione
-			try {
-				packet.setData(buf);
-				socket.receive(packet);
-			} catch (IOException e) {
-				System.out.println("Problemi nella ricezione del secondo datagramma: ");
-				e.printStackTrace();
-			}
-			
-			//settaggio di display a schermo della seconda ricezione
-			try {
-				biStream = new ByteArrayInputStream(packet.getData(), 0, packet.getLength());
-				diStream = new DataInputStream(biStream);
-				risposta = diStream.readUTF();
-				System.out.println(risposta);
-			} catch (IOException e) {
-				System.out.println("Problemi nella lettura della seconda risposta: ");
-				e.printStackTrace();
-			}
-			
 		}
 		// qui catturo le eccezioni non catturate all'interno del while
 		// in seguito alle quali il client termina l'esecuzione
@@ -152,7 +156,7 @@ public class Client {
 			e.printStackTrace();
 		}
 
-		System.out.println("LineClient: termino...");
+		System.out.println("\nClient: termino...");
 		socket.close();
 	}
 	
